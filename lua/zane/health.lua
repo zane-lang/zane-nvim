@@ -18,6 +18,15 @@ function M.check()
     health.error("nvim-treesitter (main branch) not found", { "It downloads, builds and installs the Zane parser." })
   end
 
+  -- `tree-sitter build` compiles with $CC, or cc when it is unset.
+  local cc = (vim.env.CC and vim.env.CC ~= "") and vim.env.CC or "cc"
+  local cc_path = vim.fn.exepath(vim.split(cc, " ", { trimempty = true })[1] or cc)
+  if cc_path ~= "" then
+    health.ok("C compiler: " .. cc_path)
+  else
+    health.warn(("C compiler %s not found"):format(cc), { "nvim-treesitter needs one to build the Zane parser; install one or set CC." })
+  end
+
   for _, tool in ipairs({ "tree-sitter", "curl", "tar" }) do
     local path = vim.fn.exepath(tool)
     if path == "" then

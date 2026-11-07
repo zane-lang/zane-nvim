@@ -5,10 +5,11 @@ function M.check()
   local health = vim.health
   health.start("zane")
 
-  if vim.fn.has("nvim-0.11") == 1 then
-    health.ok("Neovim 0.11 or newer")
+  -- nvim-treesitter's main branch needs Neovim 0.12.
+  if vim.fn.has("nvim-0.12") == 1 then
+    health.ok("Neovim 0.12 or newer")
   else
-    health.error("Neovim 0.11 or newer is required")
+    health.error("Neovim 0.12 or newer is required")
   end
 
   if pcall(require, "nvim-treesitter.config") then
@@ -19,10 +20,19 @@ function M.check()
 
   for _, tool in ipairs({ "tree-sitter", "curl", "tar" }) do
     local path = vim.fn.exepath(tool)
-    if path ~= "" then
-      health.ok(tool .. ": " .. path)
-    else
+    if path == "" then
       health.warn(tool .. " not on PATH", { "nvim-treesitter needs it to install the Zane parser." })
+    elseif tool == "tree-sitter" then
+      -- nvim-treesitter's minimum, which generates with the built-in JavaScript runtime.
+      local out = vim.system({ path, "--version" }, { text = true }):wait().stdout or ""
+      local version = vim.version.parse(out:match("%d+%.%d+%.%d+") or "")
+      if version and vim.version.ge(version, { 0, 26, 1 }) then
+        health.ok(("tree-sitter %s: %s"):format(tostring(version), path))
+      else
+        health.warn(("tree-sitter at %s is %s; 0.26.1 or newer is needed"):format(path, version and tostring(version) or "an unknown version"))
+      end
+    else
+      health.ok(tool .. ": " .. path)
     end
   end
 

@@ -16,7 +16,7 @@ parser and its queries always come from the same compiler version.
 
 ## Requirements
 
-- Neovim 0.11 or newer
+- Neovim 0.12 or newer
 - nvim-treesitter, `main` branch
 - the [Tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/tree/master/crates/cli)
   0.26.1 or newer (nvim-treesitter's minimum), a C compiler, `curl` and `tar`,
@@ -71,3 +71,21 @@ The highlight queries, and the arguments `zane-bound?` receives, are generated
 in `zane-lang/compiler` (`editors/neovim/queries/highlights.scm`, from
 `grammar/tree-sitter.coda`); that repository's highlighting tests run Neovim
 with this plugin.
+
+`tests/run.lua` tests the plugin end to end: it installs the parser through
+nvim-treesitter, then checks highlighting, parameter uses and
+`:checkhealth zane`. CI runs it on every push and pull request, and daily
+against the compiler's `main`. To run it locally, with Neovim, the Tree-sitter
+CLI and a C compiler installed:
+
+```sh
+git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter /tmp/nvim-treesitter
+home=$(mktemp -d)
+XDG_CONFIG_HOME=$home/config XDG_DATA_HOME=$home/data XDG_STATE_HOME=$home/state XDG_CACHE_HOME=$home/cache \
+  NVIM_TREESITTER=/tmp/nvim-treesitter nvim --headless -u NONE -l tests/run.lua
+```
+
+Set `ZANE_COMPILER_REVISION` to a compiler commit to install from it instead
+of `main`; a pull request does that for the compiler's branch of the same name.
+`tests/fixtures/parameters.zn` is a copy of the compiler's
+`tests/highlighting/parameters.zn`.

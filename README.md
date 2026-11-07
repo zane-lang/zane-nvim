@@ -50,6 +50,9 @@ would run alongside the plugin: `zane.lua` (in `plugin/`, or loaded with
 `dofile`), `after/queries/zane/highlights.scm`, and `parser/zane.so` and
 `queries/zane/` under `~/.config/nvim`. Also remove any `parsers.zane`
 registration of your own from an nvim-treesitter `TSUpdate` autocommand.
+Then run `:TSUpdate zane`: a parser and queries already copied into
+`~/.local/share/nvim/site`, where nvim-treesitter installs, count as
+installed, so the plugin would not replace them on its own.
 
 ## Options
 
@@ -74,8 +77,9 @@ with this plugin.
 
 `tests/run.lua` tests the plugin end to end: it installs the parser through
 nvim-treesitter, then checks highlighting, parameter uses and
-`:checkhealth zane`. CI runs it on every push and pull request, and daily
-against the compiler's `main`. To run it locally, with Neovim, the Tree-sitter
+`:checkhealth zane`; `tests/failures.lua` checks what happens without
+nvim-treesitter and when an install fails. CI runs both on every pull request and every push to `main`,
+and daily against the compiler's `main`. To run it locally, with Neovim, the Tree-sitter
 CLI and a C compiler installed:
 
 ```sh

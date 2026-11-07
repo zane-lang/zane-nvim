@@ -21,10 +21,11 @@ if revision and revision ~= "" then
 end
 
 local notices = {}
-local notify = vim.notify
-vim.notify = function(message, ...)
+-- Recorded and printed, not passed on: in a script, an error-level notice
+-- would raise and abort the command that caused it.
+vim.notify = function(message)
   table.insert(notices, message)
-  return notify(message, ...)
+  io.stdout:write(message .. "\n")
 end
 
 local function step(name)

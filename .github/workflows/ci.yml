@@ -71,3 +71,11 @@ jobs:
           home="$RUNNER_TEMP/home"
           XDG_CONFIG_HOME="$home/config" XDG_DATA_HOME="$home/data" XDG_STATE_HOME="$home/state" XDG_CACHE_HOME="$home/cache" \
             NVIM_TREESITTER="$RUNNER_TEMP/nvim-treesitter" nvim --headless -u NONE -l tests/run.lua
+
+      # Fresh directories again: these must run with no parser installed.
+      - name: Test the failure paths
+        run: |
+          set -euo pipefail
+          home="$RUNNER_TEMP/home-failures"
+          XDG_CONFIG_HOME="$home/config" XDG_DATA_HOME="$home/data" XDG_STATE_HOME="$home/state" XDG_CACHE_HOME="$home/cache" \
+            NVIM_TREESITTER="$RUNNER_TEMP/nvim-treesitter" nvim --headless -u NONE -l tests/failures.lua

@@ -41,4 +41,20 @@ for attempt = 1, 2 do
   assert(not vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()], "highlighting started without a parser")
 end
 
+io.stdout:write("== a parser that does not load is reported, not installed again or called missing\n")
+local broken = vim.fn.tempname()
+vim.fn.mkdir(broken .. "/parser", "p")
+vim.fn.writefile({ "not a shared library" }, broken .. "/parser/zane.so")
+vim.opt.runtimepath:prepend(broken)
+for _, auto in ipairs({ true, false }) do
+  notices = {}
+  require("zane").setup({ auto_install = auto })
+  vim.cmd("bwipeout!")
+  vim.cmd.edit(fixture)
+  vim.wait(500)
+  assert(noticed("The Zane parser does not load") or auto == false, ("auto_install %s: %s"):format(auto, vim.inspect(notices)))
+  assert(not noticed("Installing the Zane parser..."), ("auto_install %s installed again: %s"):format(auto, vim.inspect(notices)))
+  assert(not noticed("No Zane parser is installed"), ("auto_install %s called it missing: %s"):format(auto, vim.inspect(notices)))
+end
+
 io.stdout:write("== all passed\n")

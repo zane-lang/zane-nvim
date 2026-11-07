@@ -134,8 +134,14 @@ local function attach(buf)
     return
   end
   -- With a parser present, installing would not help: say what failed.
-  local present, loaded = pcall(vim.treesitter.language.add, "zane")
-  if present and loaded then
+  -- language.add raises when it finds a parser it cannot load (a different
+  -- ABI, a broken file), and returns nil when it finds none.
+  local found, loaded = pcall(vim.treesitter.language.add, "zane")
+  if not found then
+    notify_once("load", "The Zane parser does not load: " .. tostring(loaded) .. "\nRun :TSUpdate zane, then restart Neovim.", vim.log.levels.ERROR)
+    return
+  end
+  if loaded then
     local _, err = pcall(vim.treesitter.start, buf, "zane")
     notify_once("start", "Zane highlighting did not start: " .. tostring(err) .. "\nRun :checkhealth zane.", vim.log.levels.ERROR)
     return

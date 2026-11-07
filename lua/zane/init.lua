@@ -114,12 +114,12 @@ function M.install()
         vim.notify("Installing the Zane parser failed" .. reason, vim.log.levels.ERROR, { title = "zane" })
         return
       end
-      -- Neovim leaves a directory that did not exist at startup off
-      -- 'runtimepath', and nvim-treesitter's install directory may be new.
+      -- nvim-treesitter's install directory may not have existed at startup:
+      -- then it is either missing from 'runtimepath' or missing from Neovim's
+      -- cache of its directories. Setting it again fixes both.
       local dir = vim.fs.dirname(require("nvim-treesitter.config").get_install_dir("parser"))
-      if not vim.tbl_contains(vim.opt.runtimepath:get(), dir) then
-        vim.opt.runtimepath:prepend(dir)
-      end
+      vim.opt.runtimepath:remove(dir)
+      vim.opt.runtimepath:prepend(dir)
       for _, buf in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype == "zane" then
           start(buf)

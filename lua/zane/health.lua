@@ -36,9 +36,14 @@ function M.check()
     end
   end
 
-  local ok, loaded = pcall(vim.treesitter.language.add, "zane")
-  if not ok or not loaded then
-    health.error("no Zane parser installed", { "Open a .zn file, or run :TSInstall zane." })
+  -- add returns nil and a message when no parser is found, and raises when
+  -- one is found but cannot be loaded (for example a different ABI).
+  local ok, loaded, err = pcall(vim.treesitter.language.add, "zane")
+  if not ok then
+    health.error("the Zane parser does not load: " .. tostring(loaded), { "Run :TSUpdate zane." })
+    return
+  elseif not loaded then
+    health.error("no Zane parser installed" .. (err and (": " .. err) or ""), { "Open a .zn file, or run :TSInstall zane." })
     return
   end
   health.ok("Zane parser loads")

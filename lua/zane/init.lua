@@ -133,6 +133,13 @@ local function attach(buf)
   if start(buf) then
     return
   end
+  -- With a parser present, installing would not help: say what failed.
+  local present, loaded = pcall(vim.treesitter.language.add, "zane")
+  if present and loaded then
+    local _, err = pcall(vim.treesitter.start, buf, "zane")
+    notify_once("start", "Zane highlighting did not start: " .. tostring(err) .. "\nRun :checkhealth zane.", vim.log.levels.ERROR)
+    return
+  end
   if M.config.auto_install then
     M.install()
   else

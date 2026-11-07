@@ -1,6 +1,7 @@
 # zane-nvim
 
-[Zane](https://github.com/zane-lang/compiler) support for Neovim:
+Neovim support for the [Zane](https://github.com/zane-lang/zane) programming
+language:
 
 - `.zn` and `.zane` files get the `zane` filetype;
 - Tree-sitter highlighting starts in them, including each use of a
@@ -43,17 +44,6 @@ list before this plugin has registered the parser. `:TSUpdate` (or
 `:TSUpdate zane`) fetches the compiler's current grammar and queries again;
 restart Neovim afterwards, since a loaded parser is not replaced.
 
-### Moving from a manual install
-
-Remove what the compiler's old instructions had you copy or load, since it
-would run alongside the plugin: `zane.lua` (in `plugin/`, or loaded with
-`dofile`), `after/queries/zane/highlights.scm`, and `parser/zane.so` and
-`queries/zane/` under `~/.config/nvim`. Also remove any `parsers.zane`
-registration of your own from an nvim-treesitter `TSUpdate` autocommand.
-Then run `:TSUpdate zane`: a parser and queries already copied into
-`~/.local/share/nvim/site`, where nvim-treesitter installs, count as
-installed, so the plugin would not replace them on its own.
-
 ## Options
 
 ```lua
@@ -67,6 +57,18 @@ require("zane").setup({
 With lazy.nvim, pass them as `opts`.
 
 `:checkhealth zane` checks the setup.
+
+## Moving from a manual install
+
+If you set up Zane highlighting by hand from the compiler repository's
+earlier instructions, remove those files, since they would run alongside the
+plugin: `zane.lua` (in `plugin/`, or loaded with `dofile`),
+`after/queries/zane/highlights.scm`, and `parser/zane.so` and `queries/zane/`
+under `~/.config/nvim`. Also remove any `parsers.zane`
+registration of your own from an nvim-treesitter `TSUpdate` autocommand.
+Then run `:TSUpdate zane`: a parser and queries already copied into
+`~/.local/share/nvim/site`, where nvim-treesitter installs, count as
+installed, so the plugin would not replace them on its own.
 
 ## Development
 

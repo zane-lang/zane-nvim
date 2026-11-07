@@ -28,13 +28,13 @@ parser and its queries always come from the same compiler version.
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
-{ "TheLazyCat00/zane-nvim", lazy = false }
+{ "zane-lang/zane-nvim", lazy = false }
 ```
 
 With Neovim 0.12's built-in `vim.pack`:
 
 ```lua
-vim.pack.add({ "https://github.com/TheLazyCat00/zane-nvim" })
+vim.pack.add({ "https://github.com/zane-lang/zane-nvim" })
 ```
 
 Open a `.zn` file and the parser installs. Don't put `"zane"` in the list you

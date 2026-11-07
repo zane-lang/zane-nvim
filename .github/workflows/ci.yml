@@ -1,0 +1,84 @@
+name: CI
+
+# Installs the Zane parser the way a user does, through nvim-treesitter from
+# zane-lang/compiler, and checks highlighting, zane-bound? and :checkhealth.
+# The grammar and queries come from the compiler, so a scheduled run also
+# catches a compiler change that breaks the plugin.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Neovim 0.12 is nvim-treesitter main's minimum. The Tree-sitter CLI is the
+  # version zane-lang/compiler pins (editors/tree-sitter-zane/package.json).
+  NEOVIM_VERSION: v0.12.6
+  TREE_SITTER_VERSION: v0.27.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing later pushes or fetches from this repository.
+          persist-credentials: false
+
+      - name: Install Neovim and the Tree-sitter CLI
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -sSfL "https://github.com/neovim/neovim/releases/download/$NEOVIM_VERSION/nvim-linux-x86_64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          ln -s "$RUNNER_TEMP/nvim-linux-x86_64/bin/nvim" "$RUNNER_TEMP/bin/nvim"
+          curl -sSfL "https://github.com/tree-sitter/tree-sitter/releases/download/$TREE_SITTER_VERSION/tree-sitter-linux-x64.gz" | gunzip > "$RUNNER_TEMP/bin/tree-sitter"
+          chmod +x "$RUNNER_TEMP/bin/tree-sitter"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch nvim-treesitter
+        run: git clone --quiet --depth 1 --branch main https://github.com/nvim-treesitter/nvim-treesitter "$RUNNER_TEMP/nvim-treesitter"
+
+      # A pull request installs the parser from the compiler's branch of the
+      # same name when there is one, so a change made in both repositories is
+      # tested as a whole; anything else uses the compiler's main. The branch
+      # is resolved to a commit, which nvim-treesitter downloads as an archive.
+      - name: Choose the compiler revision
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          if [ -n "$BRANCH" ]; then
+            commit=$(git ls-remote --heads https://github.com/zane-lang/compiler "refs/heads/$BRANCH" | cut -f1)
+            if [ -n "$commit" ]; then
+              echo "zane-lang/compiler: $BRANCH ($commit)"
+              echo "ZANE_COMPILER_REVISION=$commit" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          fi
+          echo "zane-lang/compiler: main"
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          home="$RUNNER_TEMP/home"
+          XDG_CONFIG_HOME="$home/config" XDG_DATA_HOME="$home/data" XDG_STATE_HOME="$home/state" XDG_CACHE_HOME="$home/cache" \
+            NVIM_TREESITTER="$RUNNER_TEMP/nvim-treesitter" nvim --headless -u NONE -l tests/run.lua
+
+      # Fresh directories again: these must run with no parser installed.
+      - name: Test the failure paths
+        run: |
+          set -euo pipefail
+          home="$RUNNER_TEMP/home-failures"
+          XDG_CONFIG_HOME="$home/config" XDG_DATA_HOME="$home/data" XDG_STATE_HOME="$home/state" XDG_CACHE_HOME="$home/cache" \
+            NVIM_TREESITTER="$RUNNER_TEMP/nvim-treesitter" nvim --headless -u NONE -l tests/failures.lua

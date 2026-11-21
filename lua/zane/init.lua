@@ -1,13 +1,27 @@
 -- Zane support for Neovim: filetype detection, Tree-sitter highlighting, the
--- `zane-bound?` query predicate, and the parser's registration with
+-- `zane-bound?` query predicate, the parser's registration with
 -- nvim-treesitter, which downloads the grammar and queries from
--- zane-lang/compiler and builds the parser.
+-- zane-lang/compiler and builds the parser, and the language server, which
+-- `zane lsp` starts.
 local M = {}
 
 M.config = {
   -- Install the parser through nvim-treesitter the first time a Zane file is
   -- opened without one.
   auto_install = true,
+  -- Start the language server for Zane files: true starts `zane lsp`, false
+  -- starts nothing, and a table is merged into the server's configuration,
+  -- as `{ cmd = { "/path/to/zane", "lsp" } }`.
+  lsp = true,
+}
+
+-- The language server's configuration, which vim.lsp.config("zane") holds.
+-- Its root is the nearest directory with a project's manifest; a file outside
+-- every project gets a server with no root.
+M.lsp_defaults = {
+  cmd = { "zane", "lsp" },
+  filetypes = { "zane" },
+  root_markers = { "zane.coda" },
 }
 
 -- Where nvim-treesitter gets the parser and the queries Neovim reads.
@@ -153,8 +167,77 @@ local function attach(buf)
   end
 end
 
+-- The command that starts the language server, after the last setup call.
+M.lsp_cmd = nil
+local lsp_enabled = false
+
+-- Enables the language server once its command can run. Without the
+-- command no server starts, and :checkhealth zane says why: a notice on every
+-- Zane file would trouble everyone who uses the plugin for highlighting alone.
+-- Each Zane file checks again, so a zane installed later starts it.
+local function enable_lsp()
+  local cmd = M.lsp_cmd
+  if lsp_enabled or cmd == nil then
+    return
+  end
+  if type(cmd) == "function" or vim.fn.executable(cmd[1]) == 1 then
+    lsp_enabled = true
+    vim.lsp.enable("zane")
+  end
+end
+
+-- Stops every Zane server and starts none until enable_lsp runs again.
+-- vim.lsp.enable("zane", false) stops only the clients that have finished
+-- initializing; a client still waiting for its server's answer would attach
+-- later, or be reused with an old command, so this stops those too.
+local function disable_lsp()
+  lsp_enabled = false
+  vim.lsp.enable("zane", false)
+  for _, client in ipairs(vim.lsp.get_clients({ name = "zane", _uninitialized = true })) do
+    client:stop()
+  end
+end
+
+-- Configures the language server, or disables it, as M.config.lsp asks. It
+-- runs on every setup call, so a later call changes the server too.
+local function configure_lsp()
+  local lsp = M.config.lsp
+  if lsp == false then
+    M.lsp_cmd = nil
+    disable_lsp()
+    return
+  end
+  local config = vim.deepcopy(M.lsp_defaults)
+  if type(lsp) == "table" then
+    config = vim.tbl_deep_extend("force", config, lsp)
+  end
+  M.lsp_cmd = config.cmd
+  local argv = config.cmd
+  if type(argv) == "table" then
+    -- `zane lsp` runs the compiler of the project it starts in, so the
+    -- server starts in the project's root rather than in Neovim's working
+    -- directory.
+    config.cmd = function(dispatchers, client_config)
+      return vim.lsp.rpc.start(argv, dispatchers, {
+        cwd = client_config.cmd_cwd or client_config.root_dir,
+        env = client_config.cmd_env,
+      })
+    end
+  end
+  -- Assigned rather than merged: vim.lsp.config("zane", config) would keep
+  -- the options of an earlier setup call, such as a cmd_cwd that this call
+  -- no longer gives. A vim.lsp.config("zane", ...) after setup still merges
+  -- on top.
+  vim.lsp.config.zane = config
+  if lsp_enabled then
+    disable_lsp()
+  end
+  enable_lsp()
+end
+
 function M.setup(opts)
   M.config = vim.tbl_extend("force", M.config, opts or {})
+  configure_lsp()
   if configured then
     return
   end
@@ -169,6 +252,7 @@ function M.setup(opts)
     group = group,
     pattern = "zane",
     callback = function(args)
+      enable_lsp()
       attach(args.buf)
     end,
   })

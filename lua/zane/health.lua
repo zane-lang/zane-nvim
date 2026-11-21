@@ -45,6 +45,30 @@ function M.check()
     end
   end
 
+  -- The language server, which `zane lsp` starts.
+  local lsp = require("zane").config.lsp
+  if lsp == false then
+    health.info("the language server is off (lsp = false)")
+  else
+    local cmd = require("zane").lsp_cmd
+    if type(cmd) ~= "table" then
+      health.ok("the language server starts through a function")
+    elseif vim.fn.executable(cmd[1]) == 0 then
+      health.warn(cmd[1] .. " not found, so the language server does not start", {
+        "Install zane: https://github.com/zane-lang/zane#install",
+        "Or set lsp = { cmd = { ... } }, or lsp = false to turn it off.",
+      })
+    else
+      -- Only `zane` is asked for its commands; another command is the user's.
+      local help = cmd[2] == "lsp" and vim.system({ cmd[1], "help" }, { text = true }):wait(10000).stdout or ""
+      if cmd[2] == "lsp" and not help:find("\n%s*lsp%s") then
+        health.warn(vim.fn.exepath(cmd[1]) .. " has no `lsp` command", { "Run `zane self update`." })
+      else
+        health.ok("language server: " .. table.concat(cmd, " "))
+      end
+    end
+  end
+
   -- add returns nil and a message when no parser is found, and raises when
   -- one is found but cannot be loaded (for example a different ABI).
   local ok, loaded, err = pcall(vim.treesitter.language.add, "zane")

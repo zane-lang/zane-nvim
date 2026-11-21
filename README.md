@@ -65,9 +65,11 @@ require("zane").setup({
 
 With lazy.nvim, pass them as `opts`.
 
-The language server's configuration is `vim.lsp.config("zane")`: it starts in
-the nearest directory above the file that holds `zane.coda`, so `zane lsp`
-runs that project's compiler, and checks each file the way `zane check` does.
+The language server's configuration is `vim.lsp.config("zane")`. Each
+`setup` call replaces it with the defaults and the `lsp` table, and a
+`vim.lsp.config("zane", ...)` call after `setup` changes it further. The
+server starts in the nearest directory above the file that holds
+`zane.coda`, so `zane lsp` runs that project's compiler, and checks each file the way `zane check` does.
 A file outside every project gets a server with no root, which reports its
 syntax errors and lists its declarations. To run another `zane`:
 

@@ -48,6 +48,58 @@ vim.cmd.edit(dir .. "/loose.zn")
 local loose = wait_attached(vim.api.nvim_get_current_buf())
 assert(loose.root_dir == nil, "root_dir is " .. tostring(loose.root_dir))
 
+local function all_clients()
+  return vim.lsp.get_clients({ name = "zane", _uninitialized = true })
+end
+
+local function stop_all()
+  for _, c in ipairs(all_clients()) do
+    c:stop(true)
+  end
+  assert(vim.wait(10000, function() return #all_clients() == 0 end, 50), "a server still runs")
+end
+
+-- Opens main.zn with a server whose initialize answer comes after a delay,
+-- and returns once that server's client exists, still initializing.
+local slow_log = dir .. "/slow.log"
+local slow = { vim.v.progpath, "--headless", "-u", "NONE", "-l", root .. "/tests/stub_server.lua", slow_log, "3000" }
+local function open_with_slow_server()
+  stop_all()
+  vim.cmd("silent! %bwipeout!")
+  require("zane").setup({ lsp = { cmd = slow } })
+  vim.cmd.edit(project .. "/bin/app/main.zn")
+  assert(vim.wait(5000, function() return #all_clients() == 1 end, 20), "no server started")
+  assert(not all_clients()[1].initialized, "the slow server answered at once")
+end
+
+step("lsp = false stops a server that is still initializing")
+open_with_slow_server()
+require("zane").setup({ lsp = false })
+assert(vim.wait(2000, function() return #all_clients() == 0 end, 20), "the initializing server still runs")
+vim.wait(3500)
+assert(#all_clients() == 0, "the initializing server attached after lsp = false")
+
+step("a new command replaces a server that is still initializing")
+open_with_slow_server()
+vim.fn.delete(log)
+require("zane").setup({ lsp = { cmd = stub } })
+local replaced = wait_attached(vim.api.nvim_get_current_buf())
+assert(vim.wait(5000, function() return vim.fn.filereadable(log) == 1 end), "the new command did not start")
+vim.wait(3500)
+assert(#all_clients() == 1 and all_clients()[1].id == replaced.id, "the old server is still running")
+
+step("a later setup call drops the options of an earlier one")
+stop_all()
+vim.cmd("silent! %bwipeout!")
+require("zane").setup({ lsp = { cmd = stub, cmd_cwd = dir } })
+require("zane").setup({ lsp = { cmd = stub } })
+vim.fn.delete(log)
+vim.cmd.edit(project .. "/bin/app/main.zn")
+wait_attached(vim.api.nvim_get_current_buf())
+assert(vim.wait(5000, function() return vim.fn.filereadable(log) == 1 end), "the server wrote no log")
+assert(vim.fn.readfile(log)[1] == project, "the server runs in " .. vim.fn.readfile(log)[1])
+require("zane").setup({ lsp = { cmd = stub } })
+
 step("lsp = false stops the server and starts none for the next file")
 require("zane").setup({ lsp = false })
 assert(vim.wait(10000, function() return #vim.lsp.get_clients({ name = "zane" }) == 0 end, 50), "the server still runs")

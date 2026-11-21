@@ -186,14 +186,25 @@ local function enable_lsp()
   end
 end
 
+-- Stops every Zane server and starts none until enable_lsp runs again.
+-- vim.lsp.enable("zane", false) stops only the clients that have finished
+-- initializing; a client still waiting for its server's answer would attach
+-- later, or be reused with an old command, so this stops those too.
+local function disable_lsp()
+  lsp_enabled = false
+  vim.lsp.enable("zane", false)
+  for _, client in ipairs(vim.lsp.get_clients({ name = "zane", _uninitialized = true })) do
+    client:stop()
+  end
+end
+
 -- Configures the language server, or disables it, as M.config.lsp asks. It
 -- runs on every setup call, so a later call changes the server too.
 local function configure_lsp()
   local lsp = M.config.lsp
   if lsp == false then
     M.lsp_cmd = nil
-    lsp_enabled = false
-    vim.lsp.enable("zane", false)
+    disable_lsp()
     return
   end
   local config = vim.deepcopy(M.lsp_defaults)
@@ -213,10 +224,13 @@ local function configure_lsp()
       })
     end
   end
-  vim.lsp.config("zane", config)
+  -- Assigned rather than merged: vim.lsp.config("zane", config) would keep
+  -- the options of an earlier setup call, such as a cmd_cwd that this call
+  -- no longer gives. A vim.lsp.config("zane", ...) after setup still merges
+  -- on top.
+  vim.lsp.config.zane = config
   if lsp_enabled then
-    lsp_enabled = false
-    vim.lsp.enable("zane", false)
+    disable_lsp()
   end
   enable_lsp()
 end

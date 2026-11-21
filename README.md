@@ -10,7 +10,10 @@ language:
   [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter), which
   downloads the grammar and highlight queries from `zane-lang/compiler`, builds
   the parser and installs both. The plugin starts that install the first time
-  a Zane file is opened without a parser.
+  a Zane file is opened without a parser;
+- the Zane language server starts for them, through `zane lsp`: the
+  compiler's own diagnostics, hover, go-to-definition, references, rename,
+  completion, document symbols and semantic highlighting.
 
 The grammar is not part of this plugin: it comes from the compiler, so the
 parser and its queries always come from the same compiler version.
@@ -23,6 +26,9 @@ parser and its queries always come from the same compiler version.
   0.26.1 or newer (nvim-treesitter's minimum), a C compiler, `curl` and `tar`,
   which nvim-treesitter uses to install parsers. Node is not needed: the CLI
   generates the parser with its built-in JavaScript runtime.
+- for the language server, [`zane`](https://github.com/zane-lang/zane#install)
+  on `PATH`, and a compiler release that has the server. Without `zane`,
+  highlighting works and no server starts.
 
 ## Install
 
@@ -51,10 +57,23 @@ require("zane").setup({
   -- Install the parser the first time a Zane file is opened without one.
   -- When false, run :TSInstall zane yourself.
   auto_install = true,
+  -- Start the language server: true runs `zane lsp`, false starts none, and
+  -- a table changes the server's configuration, such as its command.
+  lsp = true,
 })
 ```
 
 With lazy.nvim, pass them as `opts`.
+
+The language server's configuration is `vim.lsp.config("zane")`: it starts in
+the nearest directory above the file that holds `zane.coda`, so `zane lsp`
+runs that project's compiler, and checks each file the way `zane check` does.
+A file outside every project gets a server with no root, which reports its
+syntax errors and lists its declarations. To run another `zane`:
+
+```lua
+require("zane").setup({ lsp = { cmd = { "/path/to/zane", "lsp" } } })
+```
 
 `:checkhealth zane` checks the setup.
 
@@ -80,7 +99,9 @@ with this plugin.
 `tests/run.lua` tests the plugin end to end: it installs the parser through
 nvim-treesitter, then checks highlighting, parameter uses and
 `:checkhealth zane`; `tests/failures.lua` checks what happens without
-nvim-treesitter and when an install fails. CI runs both on every pull request and every push to `main`,
+nvim-treesitter and when an install fails; `tests/lsp.lua` checks how the
+language server starts and stops, with `tests/stub_server.lua` standing in for
+`zane lsp`, and needs neither zane nor nvim-treesitter. CI runs all three on every pull request and every push to `main`,
 and daily against the compiler's `main`. To run it locally, with Neovim, the Tree-sitter
 CLI and a C compiler installed:
 

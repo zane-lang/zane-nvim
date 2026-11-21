@@ -35,7 +35,10 @@ end
 local fixture = root .. "/tests/fixtures/parameters.zn"
 
 step("with auto_install off, a missing parser is reported and nothing installs")
-require("zane").setup({ auto_install = false })
+-- tests/lsp.lua tests the language server; a stub stands in for `zane lsp`
+-- here, so :checkhealth zane finds its command.
+local stub = { vim.v.progpath, "--headless", "-u", "NONE", "-l", root .. "/tests/stub_server.lua", vim.fn.tempname() }
+require("zane").setup({ auto_install = false, lsp = { cmd = stub } })
 vim.cmd.edit(fixture)
 assert(vim.bo.filetype == "zane", "filetype detection failed")
 assert(vim.tbl_contains(notices, "No Zane parser is installed. Run :TSInstall zane."), vim.inspect(notices))

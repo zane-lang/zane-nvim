@@ -72,8 +72,7 @@ end
 
 -- (#zane-bound? @name "binders" "containers") holds when a binder of the
 -- captured name is a child of one of the name's ancestors. Zane forbids a
--- local from shadowing a parameter, so that binder is the one the name refers
--- to.
+-- local from shadowing a parameter, so the name refers to that binder.
 --
 -- The walk goes down from the root rather than up from the name: finding a
 -- node's parent searches from the root each time, and a binder's siblings are
@@ -198,7 +197,7 @@ local function disable_lsp()
   end
 end
 
--- Configures the language server, or disables it, as M.config.lsp asks. It
+-- Configures the language server, or disables it, as M.config.lsp sets. It
 -- runs on every setup call, so a later call changes the server too.
 local function configure_lsp()
   local lsp = M.config.lsp

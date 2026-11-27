@@ -100,8 +100,8 @@ with this plugin.
 
 `tests/run.lua` tests the plugin end to end: it installs the parser through
 nvim-treesitter, then checks highlighting, parameter uses and
-`:checkhealth zane`; `tests/failures.lua` checks what happens without
-nvim-treesitter and when an install fails; `tests/lsp.lua` checks how the
+`:checkhealth zane`; `tests/failures.lua` checks the plugin's behaviour without
+nvim-treesitter and after a failed install; `tests/lsp.lua` checks how the
 language server starts and stops, with `tests/stub_server.lua` standing in for
 `zane lsp`, and needs neither zane nor nvim-treesitter. CI runs all three on every pull request and every push to `main`,
 and daily against the compiler's `main`. To run it locally, with Neovim, the Tree-sitter
